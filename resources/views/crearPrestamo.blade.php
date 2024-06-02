@@ -7,7 +7,7 @@
             <h2>Crear prestamo</h2>
         </div>
         <div>
-            <a href="{{URL::to('/')}}" class="btn btn-primary">Volver</a>
+            <a href="{{ route('index') }}" class="btn btn-primary">Volver</a>
         </div>
     </div>
 

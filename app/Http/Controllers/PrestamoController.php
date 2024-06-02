@@ -11,16 +11,19 @@ use Illuminate\Http\Request;
 class PrestamoController extends Controller
 {
     /**
-     * Muestra un listado de los préstamos, incluyendo información de la persona y el objeto relacionados.
+     * Muestra un listado de los préstamos del usuario autenticado.
      *
      * @return \Illuminate\View\View Vista con el listado de préstamos.
      */
-    
-     public function index()
-     {
-         $prestamos = Prestamo::with('persona', 'objeto')->latest()->paginate(10);
-         return view('indexPrestamo', ['prestamos' => $prestamos]);
-     }
+    public function index()
+    {
+        $prestamos = Prestamo::with('persona', 'objeto')
+            ->where('user_id', auth()->user()->id) // Filtrar por user_id
+            ->latest()
+            ->paginate(10);
+
+        return view('indexPrestamo', ['prestamos' => $prestamos]);
+    }
 
     /**
      * Muestra el formulario para crear un nuevo préstamo.
@@ -43,30 +46,44 @@ class PrestamoController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'id_objeto' => 'required',
-            'id_persona' => 'required',
-            'fecha_prestamo' => 'required',
-            'fecha_a_devolver' => 'required'
-        ]);
+    // Convertir las fechas de dd/mm/yyyy a Y-m-d
+    $fechaPrestamo = \DateTime::createFromFormat('d/m/Y', $request->fecha_prestamo);
+    $fechaDevolucion = \DateTime::createFromFormat('d/m/Y', $request->fecha_a_devolver);
 
-        // Creamos una instancia para el nuevo prestamo
-        $nuevoPrestamo = new Prestamo;
+    // Validar las fechas convertidas
+    $request->merge([
+        'fecha_prestamo' => $fechaPrestamo ? $fechaPrestamo->format('Y-m-d') : null,
+        'fecha_a_devolver' => $fechaDevolucion ? $fechaDevolucion->format('Y-m-d') : null,
+    ]);
 
-        // Añadimos los valores convertidos
-        $nuevoPrestamo->id_objeto = $request->id_objeto;
-        $nuevoPrestamo->id_persona = $request->id_persona;
+    $request->validate([
+        'id_objeto' => 'required',
+        'id_persona' => 'required',
+        'fecha_prestamo' => 'required|date',
+        'fecha_a_devolver' => 'required|date|after_or_equal:fecha_prestamo',
+    ], [
+        'id_objeto.required' => 'El objeto es obligatorio.',
+        'id_persona.required' => 'La persona es obligatoria.',
+        'fecha_prestamo.required' => 'La fecha de préstamo es obligatoria.',
+        'fecha_prestamo.date' => 'La fecha de préstamo debe tener un formato de fecha válido.',
+        'fecha_a_devolver.required' => 'La fecha de devolución es obligatoria.',
+        'fecha_a_devolver.date' => 'La fecha de devolución debe tener un formato de fecha válido.',
+        'fecha_a_devolver.after_or_equal' => 'La fecha de devolución debe ser igual o posterior a la fecha de préstamo.'
+    ]);
 
-        // Al cambiar el tipo de separación de fechas, se entienden como europeas
-        $conversionDate = str_replace('/', '-', $request->fecha_prestamo);
-        $nuevoPrestamo->fecha_prestamo = date('Y-m-d', strtotime($conversionDate));
-        $conversionDate = str_replace('/', '-', $request->fecha_a_devolver);
-        $nuevoPrestamo->fecha_a_devolver = date('Y-m-d', strtotime($conversionDate));
+    // Crear una instancia para el nuevo préstamo
+    $nuevoPrestamo = new Prestamo;
+    $nuevoPrestamo->id_objeto = $request->id_objeto;
+    $nuevoPrestamo->id_persona = $request->id_persona;
+    $nuevoPrestamo->user_id = auth()->user()->id; // Asignar el ID del usuario autenticado
+    $nuevoPrestamo->fecha_prestamo = $request->fecha_prestamo;
+    $nuevoPrestamo->fecha_a_devolver = $request->fecha_a_devolver;
 
         // Guardamos en la BD
         $nuevoPrestamo->save();
 
-        return redirect()->route('prestamo.index')->with('success', 'Nuevo prestamo añadido.');
+        return redirect()->route('index')->with('success', 'Nuevo prestamo añadido.');
+
     }
 
     
@@ -97,7 +114,10 @@ class PrestamoController extends Controller
      */
     public function destroy(Prestamo $prestamo)
     {
+        if ($prestamo->user_id != auth()->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
         $prestamo->delete();
-        return redirect()->route('prestamo.index')->with('success', 'Prestamo eliminada.');
+        return redirect()->route('index')->with('success', 'Prestamo eliminada.');
     }
 }

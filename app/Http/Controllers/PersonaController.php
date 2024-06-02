@@ -14,9 +14,8 @@ class PersonaController extends Controller
      */
     public function index()
     {
-        $personas = Persona::latest()->paginate(10);
-
-        return view ('indexPersona', ['personas' => $personas]);
+        $personas = Persona::where('user_id', auth()->user()->id)->latest()->paginate(10);
+        return view('indexPersona', ['personas' => $personas]);
     }
 
      /**
@@ -46,7 +45,10 @@ class PersonaController extends Controller
             'email.email' => 'Debe ingresar un email válido.'
         ]);
     
-        Persona::create($request->all());
+        $persona = new Persona($request->all()); // Crear una nueva instancia de Persona
+        $persona->user_id = auth()->user()->id; // Asignar el ID del usuario autenticado
+        $persona->save(); // Guardar la persona en la base de datos
+    
         return redirect()->route('persona.index')->with('success', 'Nueva persona añadida.');
     }
 
@@ -55,19 +57,23 @@ class PersonaController extends Controller
      */
     public function show(Persona $persona)
     {
-        //** */
+        
     }
 
-    /**
-     * Muestra el formulario para editar una persona existente.
+  /**
+     * Muestra el formulario para editar una persona existente si pertenece al usuario autenticado.
      *
      * @param  \App\Models\Persona  $persona Modelo de la persona a editar.
-     * @return \Illuminate\View\View Vista con el formulario de edición de la persona.
+     * @return \Illuminate\View\View|\Illuminate\Http\Response Vista con el formulario de edición de la persona o respuesta de error 403.
      */
     public function edit(Persona $persona)
     {
-        return view ('editarPersona', ['persona' => $persona]);
+        if ($persona->user_id != auth()->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
+        return view('editarPersona', ['persona' => $persona]);
     }
+
 
     /**
      * Actualiza una persona existente en la base de datos.
@@ -78,6 +84,9 @@ class PersonaController extends Controller
      */
     public function update(Request $request, Persona $persona)
     {
+        if ($persona->user_id != auth()->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
         $request->validate([
             'nombre' => 'required|max:50',
             'email' => 'required|email',
@@ -100,6 +109,9 @@ class PersonaController extends Controller
 
      public function destroy(Persona $persona)
      {
+        if ($persona->user_id != auth()->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
          // Verificar si la persona tiene préstamos asociados
          if ($persona->prestamos()->count() > 0) {
              // Redirigir con un mensaje de error

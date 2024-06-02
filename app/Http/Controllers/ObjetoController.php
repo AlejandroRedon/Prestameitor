@@ -8,15 +8,14 @@ use Illuminate\Http\Request;
 class ObjetoController extends Controller
 {
     /**
-     * Muestra un listado de los objetos.
+     * Muestra un listado de los objetos del usuario autenticado.
      *
      * @return \Illuminate\View\View Vista con el listado de objetos.
      */
     public function index()
     {
-        $objetos = Objeto::latest()->paginate(10);
-
-        return view ('indexObjeto', ['objetos' => $objetos]);
+        $objetos = Objeto::where('user_id', auth()->user()->id)->latest()->paginate(10);
+        return view('indexObjeto', ['objetos' => $objetos]);
     }
 
      /**
@@ -35,16 +34,21 @@ class ObjetoController extends Controller
      * @param  \Illuminate\Http\Request  $request Datos del formulario de creación.
      * @return \Illuminate\Http\RedirectResponse Redirecciona a la vista de listado de objetos con mensaje de éxito.
      */
-    public function store(Request $request)
-    {
-        $request->validate([
-            'nombre' => 'required',
-            'tipo' => 'required'
-        ]);
 
-        Objeto::create($request->all());
-        return redirect()->route('objeto.index')->with('success', 'Nueva objeto añadida.');
-    }
+    public function store(Request $request)
+{
+    $request->validate([
+        'nombre' => 'required',
+        'tipo' => 'required'
+    ]);
+
+    $objeto = new Objeto($request->all()); // Crear una nueva instancia de Objeto
+    $objeto->user_id = auth()->user()->id; // Asignar el ID del usuario autenticado
+    $objeto->save(); // Guardar el objeto en la base de datos
+
+    return redirect()->route('objeto.index')->with('success', 'Nuevo objeto añadido.');
+}
+
 
     /**
      * Display the specified resource.
@@ -62,6 +66,9 @@ class ObjetoController extends Controller
      */
     public function edit(Objeto $objeto)
     {
+        if ($objeto->user_id != auth()->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
         return view ('editarObjeto', ['objeto' => $objeto]);
     }
 
@@ -74,6 +81,9 @@ class ObjetoController extends Controller
      */
     public function update(Request $request, Objeto $objeto)
     {
+        if ($objeto->user_id != auth()->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
         $request->validate([
             'nombre' => 'required',
             'tipo' => 'required'
@@ -91,6 +101,9 @@ class ObjetoController extends Controller
      */
     public function destroy(Objeto $objeto)
     {
+        if ($objeto->user_id != auth()->user()->id) {
+            abort(403, 'Unauthorized action.');
+        }
         $objeto->delete();
         return redirect()->route('objeto.index')->with('success', 'Objeto eliminado.');
     }

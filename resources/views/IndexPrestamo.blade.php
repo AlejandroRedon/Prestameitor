@@ -5,10 +5,11 @@
 <div class="row">
     <div class="col-12">
         <div>
-            <h2 class="text-white">Lista de Préstamos</h2>
+        <div class="text-center mt-4"> <h2 class="text-white">Lista de Préstamos</h2>
         </div>
         <nav class="navbar navbar-dark bg-dark">
             <form class="form-inline">
+                <a href="{{ route('dashboard') }}" class="btn btn-secondary">Home</a>
                 <a href="{{ route('persona.index') }}" class="btn btn-success">Gestionar personas</a>
                 <a href="{{ route('objeto.index') }}" class="btn btn-success">Gestionar objetos</a>
                 <a href="{{ route('prestamo.create') }}" class="btn btn-primary">Crear nuevo préstamo</a>

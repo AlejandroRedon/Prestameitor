@@ -8,7 +8,7 @@
         </div>
         <nav class="navbar navbar-dark bg-dark">
         <form class="form-inline">
-            <a href="{{URL::to('/');}}" class="btn btn-success">Volver</a>
+            <a href="{{ route('index') }}" class="btn btn-success">Volver</a>
             <a href="{{route('objeto.create')}}" class="btn btn-primary">Crear nuevo objeto</a>
         </form>
         </nav>
